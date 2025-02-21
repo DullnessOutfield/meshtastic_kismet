@@ -18,9 +18,9 @@ sent_ssids = []
 
 
 serial_id = '/dev/serial/by-id/usb-1a86_USB_Single_Serial_576D027276-if00'
-kismet_user = 'sigsec'
+kismet_user = 'kismet'
 kismet_url = 'http://{user}:{password}@localhost:2501'
-kismet_url = kismet_url.format(user = kismet_user, password = "L0gg3r1!")
+kismet_url = kismet_url.format(user = kismet_user, password = "kismet!")
 kismet_ssid_url = kismet_url+'/phy/phy80211/ssids/views/ssids.json'
 kismet_device_url = kismet_url+'/devices/by-key/{DEVICEKEY}/device.json'
 kismet_recent_devices = kismet_url+'/devices/last-time/{TIMESTAMP}/devices.json'
