@@ -3,24 +3,26 @@
 """
 
 import time
-import requests
+# import requests
 import json
 
-from pubsub import pub
+# from pubsub import pub
 
-import meshtastic
-import meshtastic.serial_interface
+# import meshtastic
+# import meshtastic.serial_interface
 
 
 sent_ssids = []
 
-
-
+with open('./.creds.txt', newline='') as f:
+    creds = f.readlines()
+    kismet_user = creds[0].strip()
+    kismet_pass = creds[1].strip()
+    kismet_url = f'http://{kismet_user}:{kismet_pass}@localhost:2501'
+print(kismet_url)
+input()
 
 serial_id = '/dev/serial/by-id/usb-1a86_USB_Single_Serial_576D027276-if00'
-kismet_user = 'kismet'
-kismet_url = 'http://{user}:{password}@localhost:2501'
-kismet_url = kismet_url.format(user = kismet_user, password = "kismet!")
 kismet_ssid_url = kismet_url+'/phy/phy80211/ssids/views/ssids.json'
 kismet_device_url = kismet_url+'/devices/by-key/{DEVICEKEY}/device.json'
 kismet_recent_devices = kismet_url+'/devices/last-time/{TIMESTAMP}/devices.json'
