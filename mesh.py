@@ -3,13 +3,13 @@
 """
 
 import time
-# import requests
+import requests
 import json
 
-# from pubsub import pub
+from pubsub import pub
 
-# import meshtastic
-# import meshtastic.serial_interface
+import meshtastic
+import meshtastic.serial_interface
 
 
 sent_ssids = []
@@ -47,61 +47,89 @@ helptext = ['!ssid - send new ssid beacons',
 
 def onReceive(packet, interface):  # pylint: disable=unused-argument
     """called when a packet arrives"""
-    print(packet)
-    global sent_ssids
-
-    message = ''
-    if 'text' in packet['decoded'].keys():
-        message = packet['decoded']['text'].lower().split(' ')
-    else:
+    if 'text' not in packet['decoded'].keys():
+        return
+    message = packet['decoded']['text'].lower().split(' ')
+    if not message:
         return
 
-    if message[0] == '!tskt':
-        for line in helptext:
-            iface.sendText(line)
-    if message[0] == '!ssid':
-        sent_ssids = scanSSIDs(sent_ssids)
-    if message[0] == '!clear':
-        del sent_ssids
-    if message[0] == '!devs':
-        if len(message) == 1:
-            ts = f'{(time.time() - 30):.5f}'
-        elif message[1] == 'all':
-            ts = 0
-        else: 
-            ts = f'{(time.time() - float(message[1])):.5f}'
-        devs = activeDevices(ts)
-        for i in range(0, len(devs), 10):
-            print(i)
-            iface.sendText(' '.join(devs[i:i+10]))
-    if message[0] == '!probes':
-        if len(message) == 1:
-            ts = f'{(time.time() - 30):.5f}'
-        elif message[1] == 'all':
-            ts = 0
-        else: 
-            ts = f'{(time.time() - float(message[1])):.5f}'
-        probes = activeProbes(ts)
-        for i in range(0, len(probes), 10):
-            print(i)
-            iface.sendText(' '.join(probes[i:i+10]))
-    if message[0] == '!find':
-        if len(message) >= 2:
-            macs = message[1:]
-            results = queryDevice(macs)
-            results = [[i['kismet.device.base.macaddr'], i['kismet.device.base.last_time'], i['kismet.device.base.signal']['kismet.common.signal.last_signal']] for i in results]
-            for result in results:
-                print(','.join(result))
-                iface.sendText(','.join(result))
-    if message[0] == '!stu':
-        if len(message) > 2:
-            value = stu_its_three_am(message[1], message[2])
-            if value:
-                iface.sendText(str(value))
-    pass
+    command = message[0]
+    args = message[1:]
 
+    commands = {
+        '!tskt': cmd_help,
+        '!ssid': cmd_ssid,
+        '!clear': cmd_clear,
+        '!devs': cmd_devs,
+        '!probes': cmd_probes,
+        '!find': cmd_find,
+        '!stu': cmd_stu,
+    }
 
-def onConnection(interface, topic=pub.AUTO_TOPIC):  # pylint: disable=unused-argument
+    try:
+        handler = commands[command]
+    except KeyError:
+        print(f'Unknown command: {command}')
+        return
+    
+    try:
+        handler(args)
+    except Exception as e:
+        print(f'Error with {command}: {e}')
+
+def cmd_help(args):
+    for line in helptext:
+        iface.sendText(line)
+
+def cmd_ssid(args):
+    global sent_ssids
+    sent_ssids = scanSSIDs
+
+def cmd_clear(args):
+    global sent_ssids
+    del sent_ssids
+
+def cmd_devs(args):
+    if len(args) == 0:
+        ts = f'{(time.time() - 30):.5f}'
+    elif args[0] == 'all':
+        ts = 0
+    else: 
+        ts = f'{(time.time() - float(args[0])):.5f}'
+    devs = activeDevices(ts)
+    for i in range(0, len(devs), 10):
+        print(i)
+        iface.sendText(' '.join(devs[i:i+10]))
+
+def cmd_probes(args):
+    if len(args) == 0:
+        ts = f'{(time.time() - 30):.5f}'
+    elif args[0] == 'all':
+        ts = 0
+    else: 
+        ts = f'{(time.time() - float(args[0])):.5f}'
+    probes = activeProbes(ts)
+    for i in range(0, len(probes), 10):
+        print(i)
+        iface.sendText(' '.join(probes[i:i+10]))
+
+def cmd_find(args):
+    if len(args):
+        macs = args
+        results = queryDevice(macs)
+        results = [[i['kismet.device.base.macaddr'], i['kismet.device.base.last_time'], i['kismet.device.base.signal']['kismet.common.signal.last_signal']] for i in results]
+        for result in results:
+            print(','.join(result))
+            iface.sendText(','.join(result))
+def cmd_stu(args):
+    if len(args) > 2:
+        mac = args[0]
+        field = args[1]
+        value = stu_its_three_am(mac, field)
+        if value:
+            iface.sendText(str(value))
+
+def onConnection(interface, topic=pub.AUTO_TOPIC):
     """called when we (re)connect to the radio"""
     # defaults to broadcast, specify a destination ID if you wish
     print('connected')
